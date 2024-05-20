@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <link rel='stylesheet' href='./webEvaluator.css'></link>
+</head>
+<body>
+
+<p id="root"></p>
+<script src='APPIAN_JS_SDK_URI'></script>
+<script>
+// Initialize variables
+let result;
+let currentJavascript = ``;
+let newJavascript;
+
+// Function to execute dynamically provided JavaScript code
+function executeDynamicCode(jsCode) {
+  try {
+    eval(jsCode);
+    result = "Code executed successfully!";
+  } catch (error) {
+    result = "Error executing code: " + error.message;
+  }
+  
+  // Display the result
+  document.getElementById("root").innerHTML = result;
+}
+
+// Listen for new value from Appian
+Appian.Component.onNewValue(function (newValues) {
+  newJavascript = newValues.javascript;
+  if (!newJavascript) {
+    Appian.Component.setValidations('The JavaScript code provided is empty. Please update the parameter "javascript".');
+  } else {
+    currentJavascript = newJavascript;
+    // Execute the dynamically provided code
+    executeDynamicCode(currentJavascript);
+  }
+});
+
+</script>
+
+</body>
+</html>
