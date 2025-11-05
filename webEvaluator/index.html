@@ -2,13 +2,21 @@
 <html>
 
 <head>
-  <link rel='stylesheet' href='./webEvaluator.css'></link>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="./webEvaluator.css">
 </head>
 <body>
 
 <p id="root"></p>
-<script src='APPIAN_JS_SDK_URI'></script>
+<script src="APPIAN_JS_SDK_URI"></script>
 <script>
+const root = document.getElementById("root") || document.body;
+function showMessage(msg) {
+  if (root) root.textContent = msg;
+  console.warn(msg);
+}
+
 // Initialize variables
 let result;
 let currentJavascript = ``;
@@ -22,22 +30,38 @@ function executeDynamicCode(jsCode) {
   } catch (error) {
     result = "Error executing code: " + error.message;
   }
-  
-  // Display the result
-  document.getElementById("root").innerHTML = result;
+  if (root) root.innerHTML = result;
 }
 
-// Listen for new value from Appian
-Appian.Component.onNewValue(function (newValues) {
-  newJavascript = newValues.javascript;
-  if (!newJavascript) {
-    Appian.Component.setValidations('The JavaScript code provided is empty. Please update the parameter "javascript".');
+// Register handler once Appian SDK is available
+function initAppianIntegration() {
+  if (window.Appian && Appian.Component && typeof Appian.Component.onNewValue === 'function') {
+    Appian.Component.onNewValue(function (newValues) {
+      newJavascript = newValues.javascript;
+      if (!newJavascript) {
+        if (typeof Appian.Component.setValidations === 'function') {
+          // setValidations may expect an array/object depending on Appian version; use array for safety
+          Appian.Component.setValidations(['The JavaScript code provided is empty. Please update the parameter "javascript".']);
+        } else {
+          showMessage('Validation: The JavaScript code provided is empty. Please update the parameter "javascript".');
+        }
+      } else {
+        currentJavascript = newJavascript;
+        // Execute the dynamically provided code
+        executeDynamicCode(currentJavascript);
+      }
+    });
   } else {
-    currentJavascript = newJavascript;
-    // Execute the dynamically provided code
-    executeDynamicCode(currentJavascript);
+    showMessage('Appian SDK not detected. Replace APPIAN_JS_SDK_URI with the correct SDK URI or ensure the host injects the Appian global.');
   }
-});
+}
+
+// If the SDK is loaded synchronously, init now; otherwise run after DOM load
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initAppianIntegration);
+} else {
+  initAppianIntegration();
+}
 
 </script>
 
